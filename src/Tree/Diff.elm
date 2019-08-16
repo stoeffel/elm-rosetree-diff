@@ -1,31 +1,35 @@
 module Tree.Diff exposing
-    ( Tree(..), Edit(..)
+    ( Edit(..), Node(..), Children
     , diff
     )
 
 {-| Diffing two `Tree`s.
 
-@docs Tree, Edit
+@docs Edit, Node, Children
 @docs diff
 
 -}
 
-import Tree
+import Tree exposing (Tree)
 
 
 {-| A tree with annotated `Edit`s.
 -}
-type Tree a
-    = Node a (List (Edit (Tree a)))
-
-
-{-| Annotations for changes between the two `Tree`s.
--}
 type Edit a
-    = Insert a
-    | Delete a
-    | Copy a
-    | Replace a a
+    = Insert (Node a)
+    | Delete (Node a)
+    | Copy (Node a)
+    | Replace (Node a) (Node a)
+
+
+type Node a
+    = Node a (Children a)
+
+
+{-| Children of a node.
+-}
+type alias Children a =
+    List (Edit a)
 
 
 type alias Equals a =
@@ -72,7 +76,7 @@ type alias Equals a =
     -->     )
 
 -}
-diff : Equals a -> Tree.Tree a -> Tree.Tree a -> Edit (Tree a)
+diff : Equals a -> Tree a -> Tree a -> Edit a
 diff equals x y =
     let
         labelX =
@@ -98,7 +102,7 @@ diff equals x y =
             (Node labelY <| List.map (toTree Insert) childrenY)
 
 
-diffLists : Equals a -> List (Tree.Tree a) -> List (Tree.Tree a) -> List (Edit (Tree a))
+diffLists : Equals a -> List (Tree a) -> List (Tree a) -> List (Edit a)
 diffLists equals xs ys =
     case xs of
         [] ->
@@ -114,12 +118,12 @@ diffLists equals xs ys =
                         :: diffLists equals xRest yRest
 
 
-toTree : (Tree a -> Edit (Tree a)) -> Tree.Tree a -> Edit (Tree a)
+toTree : (Node a -> Edit a) -> Tree a -> Edit a
 toTree toEdit =
     Tree.restructure identity (restructure toEdit)
 
 
-restructure : (Tree a -> Edit (Tree a)) -> a -> List (Edit (Tree a)) -> Edit (Tree a)
+restructure : (Node a -> Edit a) -> a -> List (Edit a) -> Edit a
 restructure toEdit label children =
     case children of
         [] ->
